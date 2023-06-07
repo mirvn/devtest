@@ -1,6 +1,5 @@
 package com.mirvan.devtest.employee_feature.data.repositoryImpl // ktlint-disable package-name
 
-import android.util.Log
 import com.mirvan.devtest.Core.Utils.Resource
 import com.mirvan.devtest.employee_feature.data.remote.EmployeeApi
 import com.mirvan.devtest.employee_feature.domain.model.Employees

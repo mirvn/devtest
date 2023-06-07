@@ -1,6 +1,5 @@
 package com.mirvan.devtest.employee_feature.data.repositoryImpl // ktlint-disable package-name
 
-import android.util.Log
 import com.mirvan.devtest.Core.Utils.Resource
 import com.mirvan.devtest.employee_feature.data.remote.EmployeeApi
 import com.mirvan.devtest.employee_feature.domain.model.UpdateEmployee
@@ -14,7 +13,10 @@ import java.io.IOException
 class UpdateEmployeeRepositoryImpl(
     private val api: EmployeeApi
 ) : UpdateEmployeeRepository {
-    override fun updateEmployee(employeeId: String, body: UpdateEmployee.Data): Flow<Resource<UpdateEmployee>> = flow {
+    override fun updateEmployee(
+        employeeId: String,
+        body: UpdateEmployee.Data
+    ): Flow<Resource<UpdateEmployee>> = flow {
         emit(Resource.Loading())
 
         // make Api Call

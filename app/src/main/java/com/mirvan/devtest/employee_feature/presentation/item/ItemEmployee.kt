@@ -36,7 +36,7 @@ fun ItemEmployee(
                 .fillMaxWidth()
                 .padding(8.dp)
         ) {
-            Row() {
+            Row {
                 Text(
                     text = stringResource(id = R.string.id_label),
                     modifier = modifier.wrapContentSize().padding(start = 4.dp)

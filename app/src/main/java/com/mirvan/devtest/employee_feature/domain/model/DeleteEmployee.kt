@@ -6,11 +6,13 @@ data class DeleteEmployee(
     val `data`: String?,
     val message: String?,
     val status: String?
-){
+) {
     fun toDeleteEmployeState(): DeleteEmployeeState {
         return DeleteEmployeeState(
             deleteEmployeeState = DeleteEmployee(
-                data, message, status
+                data,
+                message,
+                status
             )
         )
     }

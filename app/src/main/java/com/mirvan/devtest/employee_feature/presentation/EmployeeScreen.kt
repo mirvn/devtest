@@ -66,7 +66,8 @@ fun EmployeeScreen(
     }
     val employeeState = employeeViewModel.employeeState.value
     val employees = employeeState.employeeState?.data?.filter { employee ->
-        employee.employee_name.toString().lowercase(Locale.getDefault()).contains(searchQuery, false)
+        employee.employee_name.toString().lowercase(Locale.getDefault())
+            .contains(searchQuery, false)
     }
     isLoadingListEmployee = employeeState.isLoading
     if (!isLoadingListEmployee) itemSize = employees?.size ?: 10
@@ -75,7 +76,11 @@ fun EmployeeScreen(
     scope.launch {
         delay(2000)
         isRetryButtonEnabled = employeeState.employeeState?.data.isNullOrEmpty()
-        if (!employeeState.message.isNullOrEmpty()) Toast.makeText(context, employeeState.message, Toast.LENGTH_SHORT)
+        if (!employeeState.message.isNullOrEmpty()) Toast.makeText(
+            context,
+            employeeState.message,
+            Toast.LENGTH_SHORT
+        )
             .show()
     }
 
