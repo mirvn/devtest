@@ -1,5 +1,6 @@
 package com.mirvan.devtest.employee_feature.presentation // ktlint-disable package-name
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -32,17 +33,19 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mirvan.devtest.R
 import com.mirvan.devtest.employee_feature.domain.model.Employees
+import com.mirvan.devtest.employee_feature.domain.model.UpdateEmployee
 import com.mirvan.devtest.employee_feature.presentation.item.ItemEmployee
 import com.mirvan.devtest.employee_feature.presentation.item.ShimmerListItemEmployee
 import com.mirvan.devtest.ui.theme.Black
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 
-private var addBarangState = mutableStateOf(false)
-private var editBarangState = mutableStateOf(false)
-private var loadingState = mutableStateOf(false)
+var addBarangState = mutableStateOf(false)
+var editEmployeeState = mutableStateOf(false)
+var loadingState = mutableStateOf(false)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,19 +63,23 @@ fun EmployeeScreen(
     var isLoading by remember {
         mutableStateOf(true)
     }
+    var isRetryButtonEnabled by remember {
+        mutableStateOf(false)
+    }
     val employeeState = employeeViewModel.employeeState.value
-    if (employeeState.message?.isNotEmpty() == true) Toast.makeText(context, employeeState.message, Toast.LENGTH_SHORT)
-        .show()
     val employees = employeeState.employeeState?.data?.filter { employee ->
         employee.employee_name.toString().lowercase(Locale.getDefault()).contains(searchQuery, false)
     }
     isLoading = employeeState.isLoading
     if (!isLoading) itemSize = employees?.size ?: 10
     val scope = rememberCoroutineScope()
-    scope.launch(Dispatchers.Main) {
-        delay(3000)
-        isLoading = false
+    LaunchedEffect(key1 = employeeState.employeeState?.data != null) {
+        if (employeeState.message?.isNotEmpty() == true) Toast.makeText(context, employeeState.message, Toast.LENGTH_SHORT)
+            .show()
+        if (employeeState.employeeState?.data == null) isRetryButtonEnabled = true
     }
+    val updateEmployeeState = employeeViewModel.updateEmployeeState.value
+
     var detailEmployee by remember {
         mutableStateOf(
             Employees.DataEmployee(
@@ -92,9 +99,9 @@ fun EmployeeScreen(
         }
     )
 
-    if (editBarangState.value) {
+    if (editEmployeeState.value) {
         BottomSheetDialog(
-            bottomSheetShowState = editBarangState,
+            bottomSheetShowState = editEmployeeState,
             sheetState = modalSheetState
         ) {
             EditEmployeeSheet(
@@ -118,7 +125,7 @@ fun EmployeeScreen(
                 onClick = {
                     addBarangState.value = true
                 },
-                containerColor = MaterialTheme.colorScheme.primary,
+                containerColor = Black,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(
@@ -175,6 +182,24 @@ fun EmployeeScreen(
                 userScrollEnabled = true,
                 modifier = modifier.padding(top = 16.dp)
             ) {
+                item {
+                    AnimatedVisibility(visible = isRetryButtonEnabled) {
+                        Button(
+                            onClick = {
+                                isRetryButtonEnabled = false
+                                scope.launch(Dispatchers.IO) {
+                                    employeeViewModel.getAllEmployees()
+                                }
+                            },
+                            modifier = modifier
+                                .align(Alignment.CenterHorizontally)
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) {
+                            Text(text = stringResource(id = R.string.retry))
+                        }
+                    }
+                }
                 items(itemSize) { index ->
                     val employee = employees?.get(index)
                     ShimmerListItemEmployee(
@@ -185,7 +210,7 @@ fun EmployeeScreen(
                                     employee = employee,
                                     onCLickDetail = {
                                         detailEmployee = employee
-                                        editBarangState.value = true
+                                        editEmployeeState.value = true
                                     }
                                 )
                             }
@@ -196,7 +221,7 @@ fun EmployeeScreen(
             }
         }
     }
-    AnimatedVisibility(visible = loadingState.value) {
+    AnimatedVisibility(visible = updateEmployeeState.isLoading) {
         Box(modifier = modifier.fillMaxSize()) {
             CircularProgressIndicator(
                 color = MaterialTheme.colorScheme.primary,
@@ -236,6 +261,9 @@ private fun AddEmployeeSheet(
     }
     var profileimage by remember {
         mutableStateOf("")
+    }
+    var isDeleteLoading by remember {
+        mutableStateOf(false)
     }
 
 //    val storeBarangState = barangViewModel.storeBarangState
@@ -367,6 +395,7 @@ private fun EditEmployeeSheet(
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
 
     var id by remember {
         mutableStateOf(employeeData.id.toString())
@@ -384,13 +413,31 @@ private fun EditEmployeeSheet(
         mutableStateOf(employeeData.profile_image.toString())
     }
 
-//    val storeBarangState = barangViewModel.storeBarangState
-//    if (loadingState.value) {
-//        LaunchedEffect(key1 = true) {
-//            sheetState.hide()
-//            addBarangState.value = false
-//        }
-//    }
+    var isUpdateButtonEnabled by remember {
+        mutableStateOf(false)
+    }
+
+    val updateEmployeeState = employeeViewModel.updateEmployeeState.value
+    LaunchedEffect(key1 = updateEmployeeState.isLoading) {
+        if (updateEmployeeState.isLoading) {
+            sheetState.hide()
+            editEmployeeState.value = false
+        }
+    }
+    val ageInt = (
+        if (age == "") {
+            age = "0"
+            age.toInt()
+        } else {
+            age.toInt()
+        }
+        )
+    val updateEmployeeData = UpdateEmployee.Data(
+        name = name,
+        salary = salary,
+        age = ageInt
+    )
+
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -438,7 +485,10 @@ private fun EditEmployeeSheet(
         )
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = {
+                name = it
+                isUpdateButtonEnabled = true
+            },
             label = {
                 Text(
                     stringResource(
@@ -474,7 +524,10 @@ private fun EditEmployeeSheet(
         )
         OutlinedTextField(
             value = salary,
-            onValueChange = { salary = it },
+            onValueChange = {
+                salary = it
+                isUpdateButtonEnabled = true
+            },
             label = {
                 Text(
                     stringResource(
@@ -510,7 +563,10 @@ private fun EditEmployeeSheet(
         )
         OutlinedTextField(
             value = age,
-            onValueChange = { age = it },
+            onValueChange = {
+                age = it
+                isUpdateButtonEnabled = true
+            },
             label = {
                 Text(
                     stringResource(
@@ -545,48 +601,19 @@ private fun EditEmployeeSheet(
         Spacer(modifier = modifier.height(128.dp))
         Button(
             onClick = {
-//                    CoroutineScope(Dispatchers.Main).launch {
-//                        if (imageFile == File("")) {
-//                            barangViewModel.updateBarang(
-//                                token = token,
-//                                id_barang = dataBarang.id.toString(),
-//                                nama_barang = namaBarang.toString(),
-//                                id_merek = merekSelectedId.value.toString(),
-//                                id_distributor = distributorSelectedId.value.toString(),
-//                                tanggal_masuk = getCurrentDateTime(),
-//                                harga_barang = hargaBarang.toString(),
-//                                stok_barang = stokBarang.toString(),
-//                                foto_barang = null,
-//                                keterangan = keterangan
-//                            )
-//                        }
-//                        if (imageFile != File("")) {
-//                            barangViewModel.updateBarang(
-//                                token = token,
-//                                id_barang = dataBarang.id.toString(),
-//                                nama_barang = namaBarang.toString(),
-//                                id_merek = merekSelectedId.value.toString(),
-//                                id_distributor = distributorSelectedId.value.toString(),
-//                                tanggal_masuk = getCurrentDateTime(),
-//                                harga_barang = hargaBarang.toString(),
-//                                stok_barang = stokBarang.toString(),
-//                                foto_barang = imageFile,
-//                                keterangan = keterangan
-//                            )
-//                        }
-//                        CoroutineScope(Dispatchers.Main).launch {
-//                            loadingState.value = updateBarangState.value.isLoading
-//                            delay(2000)
-//                            if (!updateBarangState.value.isLoading) {
-//                                loadingState.value = false
-//                                Toast.makeText(
-//                                    context,
-//                                    barangViewModel.updateBarangState.value.updateBarangData?.meta?.message.toString(),
-//                                    Toast.LENGTH_SHORT
-//                                ).show()
-//                            }
-//                        }
-//                    }
+                CoroutineScope(Dispatchers.IO).launch {
+                    employeeViewModel.updateEmployee(employeeId = id, body = updateEmployeeData)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        delay(2000)
+                        if (!updateEmployeeState.isLoading) {
+                            Toast.makeText(
+                                context,
+                                employeeViewModel.updateEmployeeState.value.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -594,7 +621,8 @@ private fun EditEmployeeSheet(
             ),
             modifier = modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
+                .padding(bottom = 8.dp),
+            enabled = isUpdateButtonEnabled
         ) {
             Text(
                 text = stringResource(id = R.string.update_employee_data),

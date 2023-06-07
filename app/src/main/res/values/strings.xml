@@ -17,4 +17,5 @@
     <string name="detail_employee">Detail Employee</string>
     <string name="update_employee_data">Update Employee Data</string>
     <string name="delete_employee">Delete Employee</string>
+    <string name="retry">Retry</string>
 </resources>

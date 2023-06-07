@@ -3,7 +3,9 @@ package com.mirvan.devtest.employee_feature.di
 import com.mirvan.devtest.BuildConfig
 import com.mirvan.devtest.employee_feature.data.remote.EmployeeApi
 import com.mirvan.devtest.employee_feature.data.repositoryImpl.GetAllEmployeeRepositoryImpl
+import com.mirvan.devtest.employee_feature.data.repositoryImpl.UpdateEmployeeRepositoryImpl
 import com.mirvan.devtest.employee_feature.domain.repository.GetAllEmployeeRepository
+import com.mirvan.devtest.employee_feature.domain.repository.UpdateEmployeeRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +19,15 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object EmployeeModule {
 
+    @Provides
+    @Singleton
+    fun provideUpdateEmployeeRepository(
+        api: EmployeeApi
+    ): UpdateEmployeeRepository {
+        return UpdateEmployeeRepositoryImpl(
+            api = api
+        )
+    }
     @Provides
     @Singleton
     fun provideGetAllEmployeeRepository(

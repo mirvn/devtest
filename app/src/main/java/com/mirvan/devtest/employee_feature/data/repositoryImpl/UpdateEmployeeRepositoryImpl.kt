@@ -3,32 +3,31 @@ package com.mirvan.devtest.employee_feature.data.repositoryImpl // ktlint-disabl
 import android.util.Log
 import com.mirvan.devtest.Core.Utils.Resource
 import com.mirvan.devtest.employee_feature.data.remote.EmployeeApi
-import com.mirvan.devtest.employee_feature.domain.model.Employees
-import com.mirvan.devtest.employee_feature.domain.repository.GetAllEmployeeRepository
+import com.mirvan.devtest.employee_feature.domain.model.UpdateEmployee
+import com.mirvan.devtest.employee_feature.domain.repository.UpdateEmployeeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.json.JSONObject
 import retrofit2.HttpException
 import java.io.IOException
 
-class GetAllEmployeeRepositoryImpl(
+class UpdateEmployeeRepositoryImpl(
     private val api: EmployeeApi
-) : GetAllEmployeeRepository {
-    override fun getAllEmployee(): Flow<Resource<Employees>> = flow {
+) : UpdateEmployeeRepository {
+    override fun updateEmployee(employeeId: String, body: UpdateEmployee.Data): Flow<Resource<UpdateEmployee>> = flow {
         emit(Resource.Loading())
 
         // make Api Call
         try {
-            val remoteLoginData = api.getAllEmployees()
+            val remoteLoginData = api.updateEmployeeById(employeeId, body)
             if (remoteLoginData.isSuccessful) {
-                val remoteToDto = remoteLoginData.body()
-                val employee = remoteToDto?.toEmployees()
+                val remoteToDto = remoteLoginData.body()?.toUpdateEmployee()
                 emit(
                     Resource.Success(
-                        Employees(
-                            `data` = employee?.data,
-                            message = employee?.message,
-                            status = employee?.status
+                        UpdateEmployee(
+                            `data` = remoteToDto?.data,
+                            message = remoteToDto?.message,
+                            status = remoteToDto?.status
                         )
                     )
                 )
