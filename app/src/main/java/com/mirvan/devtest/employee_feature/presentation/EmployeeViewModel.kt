@@ -136,7 +136,6 @@ class EmployeeViewModel @Inject constructor(
                             isLoading = false,
                             message = resultData?.addEmployeeState?.message
                         )
-                        Log.e("view model", "addEmployee-Success: ${addEmployeeState.value}")
                     }
                     is Resource.Error -> {
                         _addEmployeeState.value = addEmployeeState.value.copy(
@@ -144,7 +143,6 @@ class EmployeeViewModel @Inject constructor(
                             isLoading = false,
                             message = resultMessage
                         )
-                        Log.e("view model", "addEmployee-Error: ${addEmployeeState.value}")
                     }
                     is Resource.Loading -> {
                         _addEmployeeState.value = addEmployeeState.value.copy(

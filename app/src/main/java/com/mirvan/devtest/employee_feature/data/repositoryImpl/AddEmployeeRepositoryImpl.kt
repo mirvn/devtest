@@ -32,7 +32,6 @@ class AddEmployeeRepositoryImpl(
                         )
                     )
                 )
-                Log.e("repoImpl", "addEmployee-success: $remoteToDto")
             } else {
                 val contentType = remoteLoginData.headers().get("Content-Type")
                 val errorBody = remoteLoginData.errorBody()?.string()
@@ -41,10 +40,8 @@ class AddEmployeeRepositoryImpl(
                     val errorJson = JSONObject(errorBody)
                     val errorMessage = errorJson.getString("message")
                     emit(Resource.Error(message = errorMessage))
-                    Log.e("repoImpl", "addEmployee-Error: $errorMessage")
                 } else {
                     emit(Resource.Error(message = "To many request: ${remoteLoginData.raw().code}, please try again later"))
-                    Log.e("repoImpl", "addEmployee-ToManyReq: ${remoteLoginData.raw()}")
                 }
             }
         } catch (e: HttpException) {

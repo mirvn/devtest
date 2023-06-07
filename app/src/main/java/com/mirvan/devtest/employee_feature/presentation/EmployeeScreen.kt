@@ -229,7 +229,6 @@ fun EmployeeScreen(
                                 CoroutineScope(Dispatchers.IO).launch {
                                     employeeViewModel.getAllEmployees()
                                     this.cancel()
-                                    Log.e("TAG", "EmployeeScreen: getAllemployee")
                                 }
                                 isRetryButtonEnabled = !isRetryButtonEnabled
                             },
