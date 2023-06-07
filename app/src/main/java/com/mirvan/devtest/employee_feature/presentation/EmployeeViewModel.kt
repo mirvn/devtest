@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mirvan.devtest.Core.Utils.Resource
 import com.mirvan.devtest.employee_feature.domain.model.UpdateEmployee
+import com.mirvan.devtest.employee_feature.domain.repository.AddEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.DeleteEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.GetAllEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.UpdateEmployeeRepository
+import com.mirvan.devtest.employee_feature.presentation.state.AddEmployeeState
 import com.mirvan.devtest.employee_feature.presentation.state.DeleteEmployeeState
 import com.mirvan.devtest.employee_feature.presentation.state.EmployeesState
 import com.mirvan.devtest.employee_feature.presentation.state.UpdateEmployeeState
@@ -24,7 +26,8 @@ import javax.inject.Inject
 class EmployeeViewModel @Inject constructor(
     private val employeeRepository: GetAllEmployeeRepository,
     private val updateEmployeeRepository: UpdateEmployeeRepository,
-    private val deleteEmployeeRepository: DeleteEmployeeRepository
+    private val deleteEmployeeRepository: DeleteEmployeeRepository,
+    private val addEmployeeRepository: AddEmployeeRepository
 ) : ViewModel() {
     var employeeJob: Job? = null
 
@@ -33,6 +36,9 @@ class EmployeeViewModel @Inject constructor(
 
     private val _updateEmployeeState = mutableStateOf(UpdateEmployeeState())
     val updateEmployeeState: State<UpdateEmployeeState> = _updateEmployeeState
+
+    private val _addEmployeeState = mutableStateOf(AddEmployeeState())
+    val addEmployeeState: State<AddEmployeeState> = _addEmployeeState
 
     private val _deleteEmployeeState = mutableStateOf(DeleteEmployeeState())
     val deleteEmployeeState: State<DeleteEmployeeState> = _deleteEmployeeState
@@ -105,6 +111,44 @@ class EmployeeViewModel @Inject constructor(
                     is Resource.Loading -> {
                         _updateEmployeeState.value = updateEmployeeState.value.copy(
                             updateEmployeeState = null,
+                            isLoading = true
+                        )
+                    }
+                }
+            }.launchIn(this)
+        }
+    }
+
+    fun addEmployee(body: UpdateEmployee.Data) {
+        _addEmployeeState.value = addEmployeeState.value.copy(
+            addEmployeeState = null,
+            isLoading = true
+        )
+        employeeJob?.cancel()
+        employeeJob = viewModelScope.launch {
+            addEmployeeRepository.addEmployee(body).onEach { result ->
+                val resultData = result.data?.toAddEmployeeState()
+                val resultMessage = result.message
+                when (result) {
+                    is Resource.Success -> {
+                        _addEmployeeState.value = addEmployeeState.value.copy(
+                            addEmployeeState = resultData?.addEmployeeState,
+                            isLoading = false,
+                            message = resultData?.addEmployeeState?.message
+                        )
+                        Log.e("view model", "addEmployee-Success: ${addEmployeeState.value}")
+                    }
+                    is Resource.Error -> {
+                        _addEmployeeState.value = addEmployeeState.value.copy(
+                            addEmployeeState = null,
+                            isLoading = false,
+                            message = resultMessage
+                        )
+                        Log.e("view model", "addEmployee-Error: ${addEmployeeState.value}")
+                    }
+                    is Resource.Loading -> {
+                        _addEmployeeState.value = addEmployeeState.value.copy(
+                            addEmployeeState = null,
                             isLoading = true
                         )
                     }

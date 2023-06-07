@@ -21,4 +21,6 @@
     <string name="cancel">Cancel</string>
     <string name="confirm_delete">Confirm delete</string>
     <string name="delete_employee_desc">Are you sure want to delete this employee?</string>
+    <string name="confirm_add">Add Employee</string>
+    <string name="add_employee_desc">Are you sure this data is valid and want to continue to add this as employee?</string>
 </resources>

@@ -2,9 +2,11 @@ package com.mirvan.devtest.employee_feature.di
 
 import com.mirvan.devtest.BuildConfig
 import com.mirvan.devtest.employee_feature.data.remote.EmployeeApi
+import com.mirvan.devtest.employee_feature.data.repositoryImpl.AddEmployeeRepositoryImpl
 import com.mirvan.devtest.employee_feature.data.repositoryImpl.DeleteEmployeeRepositoryImpl
 import com.mirvan.devtest.employee_feature.data.repositoryImpl.GetAllEmployeeRepositoryImpl
 import com.mirvan.devtest.employee_feature.data.repositoryImpl.UpdateEmployeeRepositoryImpl
+import com.mirvan.devtest.employee_feature.domain.repository.AddEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.DeleteEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.GetAllEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.UpdateEmployeeRepository
@@ -37,6 +39,16 @@ object EmployeeModule {
         api: EmployeeApi
     ): UpdateEmployeeRepository {
         return UpdateEmployeeRepositoryImpl(
+            api = api
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideAddEmployeeRepository(
+        api: EmployeeApi
+    ): AddEmployeeRepository {
+        return AddEmployeeRepositoryImpl(
             api = api
         )
     }

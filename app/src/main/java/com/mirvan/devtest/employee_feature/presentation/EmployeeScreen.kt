@@ -40,8 +40,8 @@ import com.mirvan.devtest.ui.theme.Black
 import kotlinx.coroutines.*
 import java.util.*
 
-private var addBarangState = mutableStateOf(false)
-private var editEmployeeState = mutableStateOf(false)
+private var addEmployeeSheetState = mutableStateOf(false)
+private var editEmployeeSheetState = mutableStateOf(false)
 private var loadingAction = mutableStateOf(false)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,7 +71,8 @@ fun EmployeeScreen(
     isLoadingListEmployee = employeeState.isLoading
     if (!isLoadingListEmployee) itemSize = employees?.size ?: 10
 
-    CoroutineScope(Dispatchers.Main).launch {
+    val scope = rememberCoroutineScope()
+    scope.launch {
         delay(2000)
         isRetryButtonEnabled = employeeState.employeeState?.data.isNullOrEmpty()
         if (!employeeState.message.isNullOrEmpty()) Toast.makeText(context, employeeState.message, Toast.LENGTH_SHORT)
@@ -80,6 +81,7 @@ fun EmployeeScreen(
 
     val updateEmployeeState = employeeViewModel.updateEmployeeState.value
     val deleteEmployeeState = employeeViewModel.deleteEmployeeState.value
+    val addEmployeeState = employeeViewModel.addEmployeeState.value
     when {
         updateEmployeeState.isLoading -> {
             updateEmployeeState.isLoading.also { loadingAction.value = it }
@@ -87,11 +89,17 @@ fun EmployeeScreen(
         deleteEmployeeState.isLoading -> {
             deleteEmployeeState.isLoading.also { loadingAction.value = it }
         }
+        addEmployeeState.isLoading -> {
+            addEmployeeState.isLoading.also { loadingAction.value = it }
+        }
         !updateEmployeeState.isLoading -> {
             updateEmployeeState.isLoading.also { loadingAction.value = it }
         }
         !deleteEmployeeState.isLoading -> {
             deleteEmployeeState.isLoading.also { loadingAction.value = it }
+        }
+        !addEmployeeState.isLoading -> {
+            addEmployeeState.isLoading.also { loadingAction.value = it }
         }
     }
 
@@ -114,13 +122,25 @@ fun EmployeeScreen(
         }
     )
 
-    if (editEmployeeState.value) {
+    if (editEmployeeSheetState.value) {
         BottomSheetDialog(
-            bottomSheetShowState = editEmployeeState,
+            bottomSheetShowState = editEmployeeSheetState,
             sheetState = modalSheetState
         ) {
             EditEmployeeSheet(
                 employeeData = detailEmployee,
+                employeeViewModel = employeeViewModel,
+                sheetState = modalSheetState
+            )
+        }
+    }
+
+    if (addEmployeeSheetState.value) {
+        BottomSheetDialog(
+            bottomSheetShowState = addEmployeeSheetState,
+            sheetState = modalSheetState
+        ) {
+            AddEmployeeSheet(
                 employeeViewModel = employeeViewModel,
                 sheetState = modalSheetState
             )
@@ -138,7 +158,7 @@ fun EmployeeScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    addBarangState.value = true
+                    addEmployeeSheetState.value = true
                 },
                 containerColor = Black,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -227,7 +247,7 @@ fun EmployeeScreen(
                                     employee = employee,
                                     onCLickDetail = {
                                         detailEmployee = employee
-                                        editEmployeeState.value = true
+                                        editEmployeeSheetState.value = true
                                     }
                                 )
                             }
@@ -259,14 +279,12 @@ fun EmployeeScreen(
 @Composable
 private fun AddEmployeeSheet(
     modifier: Modifier = Modifier,
-//    barangViewModel: BarangViewModel,
+    employeeViewModel: EmployeeViewModel,
     sheetState: SheetState
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
-    var id by remember {
-        mutableStateOf("")
-    }
     var name by remember {
         mutableStateOf("")
     }
@@ -277,120 +295,236 @@ private fun AddEmployeeSheet(
         mutableStateOf("0")
     }
 
-//    val storeBarangState = barangViewModel.storeBarangState
-//    if (loadingState.value) {
-//        LaunchedEffect(key1 = true) {
-//            sheetState.hide()
-//            addBarangState.value = false
-//        }
-//    }
+    var isUpdateButtonEnabled by remember {
+        mutableStateOf(false)
+    }
 
-    LazyColumn(
+    val addEmployeeState = employeeViewModel.addEmployeeState.value
+    LaunchedEffect(key1 = addEmployeeState.isLoading) {
+        if (addEmployeeState.isLoading) {
+            sheetState.hide()
+            addEmployeeSheetState.value = false
+        }
+    }
+    val ageInt = (
+        if (age == "") {
+            age = "0"
+            age.toInt()
+        } else {
+            age.toInt()
+        }
+        )
+
+    val dataEmployee = UpdateEmployee.Data(
+        name = name,
+        salary = salary,
+        age = ageInt
+    )
+
+    var confirmAdd by remember {
+        mutableStateOf(false)
+    }
+    if (confirmAdd) {
+        AlertDialog(
+            onDismissRequest = {
+                // Dismiss the dialog when the user clicks outside the dialog or on the back button.
+                // If you want to disable that functionality, simply leave this block empty.
+                confirmAdd = !confirmAdd
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // perform the confirm action and
+                        // close the dialog
+                        CoroutineScope(Dispatchers.IO).launch {
+                            employeeViewModel.addEmployee(body = dataEmployee)
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(2000)
+                                if (!addEmployeeState.isLoading) {
+                                    Toast.makeText(
+                                        context,
+                                        employeeViewModel.addEmployeeState.value.message,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                        confirmAdd = !confirmAdd
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.add_employee))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        // close the dialog
+                        confirmAdd = !confirmAdd
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.cancel))
+                }
+            },
+            title = {
+                Text(text = stringResource(id = R.string.confirm_add))
+            },
+            text = {
+                Text(text = stringResource(id = R.string.add_employee_desc))
+            },
+            modifier = Modifier.wrapContentSize(),
+            shape = RoundedCornerShape(4.dp),
+            containerColor = MaterialTheme.colorScheme.onPrimary
+        )
+    }
+
+    Column(
         modifier = modifier
             .padding(16.dp)
             .scrollable(
                 state = rememberScrollState(),
                 orientation = Orientation.Vertical
             )
-            .wrapContentSize(),
-        userScrollEnabled = true,
-        state = rememberLazyListState()
+            .wrapContentSize()
     ) {
-        item {
+        Text(
+            text = stringResource(id = R.string.add_employee),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = modifier.padding(bottom = 8.dp)
+        )
+        OutlinedTextField(
+            value = name,
+            onValueChange = {
+                name = it
+                isUpdateButtonEnabled = true
+            },
+            label = {
+                Text(
+                    stringResource(
+                        id = R.string.placeholder_name
+                    ),
+                    color = MaterialTheme.colorScheme.outline
+                )
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(onDone = {
+                focusManager.moveFocus(FocusDirection.Down)
+            }),
+            shape = MaterialTheme.shapes.small,
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,
+                focusedContainerColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            placeholder = {
+                Text(
+                    stringResource(
+                        id = R.string.placeholder_name
+                    ),
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        )
+        OutlinedTextField(
+            value = salary,
+            onValueChange = {
+                salary = it
+                isUpdateButtonEnabled = true
+            },
+            label = {
+                Text(
+                    stringResource(
+                        id = R.string.placeholder_salary
+                    ),
+                    color = MaterialTheme.colorScheme.outline
+                )
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(onDone = {
+                focusManager.moveFocus(FocusDirection.Down)
+            }),
+            shape = MaterialTheme.shapes.small,
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,
+                focusedContainerColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            placeholder = {
+                Text(
+                    stringResource(
+                        id = R.string.placeholder_salary
+                    ),
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        )
+        OutlinedTextField(
+            value = age,
+            onValueChange = {
+                age = it
+                isUpdateButtonEnabled = true
+            },
+            label = {
+                Text(
+                    stringResource(
+                        id = R.string.employee_age
+                    ),
+                    color = MaterialTheme.colorScheme.outline
+                )
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            shape = MaterialTheme.shapes.small,
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,
+                focusedContainerColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            placeholder = {
+                Text(
+                    stringResource(
+                        id = R.string.employee_age
+                    ),
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        )
+        Spacer(modifier = modifier.height(160.dp))
+        Button(
+            onClick = {
+                confirmAdd = true
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            enabled = isUpdateButtonEnabled
+        ) {
             Text(
                 text = stringResource(id = R.string.add_employee),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = modifier.padding(bottom = 8.dp)
-            )
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = {
-                    Text(
-                        stringResource(
-                            id = R.string.placeholder_name
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                shape = MaterialTheme.shapes.small,
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(MaterialTheme.colorScheme.primary),
-                placeholder = {
-                    Text(
-                        stringResource(
-                            id = R.string.placeholder_name
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            )
-            OutlinedTextField(
-                value = salary,
-                onValueChange = { salary = it },
-                label = {
-                    Text(
-                        stringResource(
-                            id = R.string.placeholder_salary
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next
-                ),
-                shape = MaterialTheme.shapes.small,
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(MaterialTheme.colorScheme.primary),
-                placeholder = {
-                    Text(
-                        stringResource(
-                            id = R.string.placeholder_salary
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            )
-            OutlinedTextField(
-                value = age,
-                onValueChange = { age = it },
-                label = {
-                    Text(
-                        stringResource(
-                            id = R.string.employee_age
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next
-                ),
-                shape = MaterialTheme.shapes.small,
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(MaterialTheme.colorScheme.primary),
-                placeholder = {
-                    Text(
-                        stringResource(
-                            id = R.string.employee_age
-                        ),
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
+                modifier = modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelLarge
             )
         }
     }
@@ -429,11 +563,11 @@ private fun EditEmployeeSheet(
     LaunchedEffect(key1 = updateEmployeeState.isLoading || deleteEmployeeState.isLoading) {
         if (updateEmployeeState.isLoading) {
             sheetState.hide()
-            editEmployeeState.value = false
+            editEmployeeSheetState.value = false
         }
         if (deleteEmployeeState.isLoading) {
             sheetState.hide()
-            editEmployeeState.value = false
+            editEmployeeSheetState.value = false
         }
     }
     val ageInt = (
