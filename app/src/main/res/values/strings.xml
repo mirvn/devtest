@@ -18,4 +18,7 @@
     <string name="update_employee_data">Update Employee Data</string>
     <string name="delete_employee">Delete Employee</string>
     <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm_delete">Confirm delete</string>
+    <string name="delete_employee_desc">Are you sure want to delete this employee?</string>
 </resources>

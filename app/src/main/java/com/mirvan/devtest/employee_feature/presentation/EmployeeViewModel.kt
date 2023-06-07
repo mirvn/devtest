@@ -7,8 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mirvan.devtest.Core.Utils.Resource
 import com.mirvan.devtest.employee_feature.domain.model.UpdateEmployee
+import com.mirvan.devtest.employee_feature.domain.repository.DeleteEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.GetAllEmployeeRepository
 import com.mirvan.devtest.employee_feature.domain.repository.UpdateEmployeeRepository
+import com.mirvan.devtest.employee_feature.presentation.state.DeleteEmployeeState
 import com.mirvan.devtest.employee_feature.presentation.state.EmployeesState
 import com.mirvan.devtest.employee_feature.presentation.state.UpdateEmployeeState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class EmployeeViewModel @Inject constructor(
     private val employeeRepository: GetAllEmployeeRepository,
-    private val updateEmployeeRepository: UpdateEmployeeRepository
+    private val updateEmployeeRepository: UpdateEmployeeRepository,
+    private val deleteEmployeeRepository: DeleteEmployeeRepository
 ) : ViewModel() {
     var employeeJob: Job? = null
 
@@ -30,6 +33,9 @@ class EmployeeViewModel @Inject constructor(
 
     private val _updateEmployeeState = mutableStateOf(UpdateEmployeeState())
     val updateEmployeeState: State<UpdateEmployeeState> = _updateEmployeeState
+
+    private val _deleteEmployeeState = mutableStateOf(DeleteEmployeeState())
+    val deleteEmployeeState: State<DeleteEmployeeState> = _deleteEmployeeState
 
     init {
         getAllEmployees()
@@ -55,7 +61,7 @@ class EmployeeViewModel @Inject constructor(
                     }
                     is Resource.Error -> {
                         _employeesState.value = employeeState.value.copy(
-                            employeeState = resultData?.employeeState,
+                            employeeState = null,
                             isLoading = false,
                             message = resultMessage
                         )
@@ -99,6 +105,42 @@ class EmployeeViewModel @Inject constructor(
                     is Resource.Loading -> {
                         _updateEmployeeState.value = updateEmployeeState.value.copy(
                             updateEmployeeState = null,
+                            isLoading = true
+                        )
+                    }
+                }
+            }.launchIn(this)
+        }
+    }
+
+    fun deleteEmployee(employeeId: String) {
+        _deleteEmployeeState.value = deleteEmployeeState.value.copy(
+            deleteEmployeeState = null,
+            isLoading = true
+        )
+        employeeJob?.cancel()
+        employeeJob = viewModelScope.launch {
+            deleteEmployeeRepository.deleteEmployee(employeeId).onEach { result ->
+                val resultData = result.data?.toDeleteEmployeState()
+                val resultMessage = result.message
+                when (result) {
+                    is Resource.Success -> {
+                        _deleteEmployeeState.value = deleteEmployeeState.value.copy(
+                            deleteEmployeeState = resultData?.deleteEmployeeState,
+                            isLoading = false,
+                            message = resultData?.deleteEmployeeState?.message
+                        )
+                    }
+                    is Resource.Error -> {
+                        _deleteEmployeeState.value = deleteEmployeeState.value.copy(
+                            deleteEmployeeState = null,
+                            isLoading = false,
+                            message = resultMessage
+                        )
+                    }
+                    is Resource.Loading -> {
+                        _deleteEmployeeState.value = deleteEmployeeState.value.copy(
+                            deleteEmployeeState = null,
                             isLoading = true
                         )
                     }

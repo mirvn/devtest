@@ -37,15 +37,12 @@ import com.mirvan.devtest.employee_feature.domain.model.UpdateEmployee
 import com.mirvan.devtest.employee_feature.presentation.item.ItemEmployee
 import com.mirvan.devtest.employee_feature.presentation.item.ShimmerListItemEmployee
 import com.mirvan.devtest.ui.theme.Black
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.util.*
 
-var addBarangState = mutableStateOf(false)
-var editEmployeeState = mutableStateOf(false)
-var loadingState = mutableStateOf(false)
+private var addBarangState = mutableStateOf(false)
+private var editEmployeeState = mutableStateOf(false)
+private var loadingAction = mutableStateOf(false)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,9 +57,10 @@ fun EmployeeScreen(
     var itemSize by remember {
         mutableStateOf(10)
     }
-    var isLoading by remember {
+    var isLoadingListEmployee by remember {
         mutableStateOf(true)
     }
+
     var isRetryButtonEnabled by remember {
         mutableStateOf(false)
     }
@@ -70,15 +68,32 @@ fun EmployeeScreen(
     val employees = employeeState.employeeState?.data?.filter { employee ->
         employee.employee_name.toString().lowercase(Locale.getDefault()).contains(searchQuery, false)
     }
-    isLoading = employeeState.isLoading
-    if (!isLoading) itemSize = employees?.size ?: 10
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(key1 = employeeState.employeeState?.data != null) {
-        if (employeeState.message?.isNotEmpty() == true) Toast.makeText(context, employeeState.message, Toast.LENGTH_SHORT)
+    isLoadingListEmployee = employeeState.isLoading
+    if (!isLoadingListEmployee) itemSize = employees?.size ?: 10
+
+    CoroutineScope(Dispatchers.Main).launch {
+        delay(2000)
+        isRetryButtonEnabled = employeeState.employeeState?.data.isNullOrEmpty()
+        if (!employeeState.message.isNullOrEmpty()) Toast.makeText(context, employeeState.message, Toast.LENGTH_SHORT)
             .show()
-        if (employeeState.employeeState?.data == null) isRetryButtonEnabled = true
     }
+
     val updateEmployeeState = employeeViewModel.updateEmployeeState.value
+    val deleteEmployeeState = employeeViewModel.deleteEmployeeState.value
+    when {
+        updateEmployeeState.isLoading -> {
+            updateEmployeeState.isLoading.also { loadingAction.value = it }
+        }
+        deleteEmployeeState.isLoading -> {
+            deleteEmployeeState.isLoading.also { loadingAction.value = it }
+        }
+        !updateEmployeeState.isLoading -> {
+            updateEmployeeState.isLoading.also { loadingAction.value = it }
+        }
+        !deleteEmployeeState.isLoading -> {
+            deleteEmployeeState.isLoading.also { loadingAction.value = it }
+        }
+    }
 
     var detailEmployee by remember {
         mutableStateOf(
@@ -186,10 +201,12 @@ fun EmployeeScreen(
                     AnimatedVisibility(visible = isRetryButtonEnabled) {
                         Button(
                             onClick = {
-                                isRetryButtonEnabled = false
-                                scope.launch(Dispatchers.IO) {
+                                CoroutineScope(Dispatchers.IO).launch {
                                     employeeViewModel.getAllEmployees()
+                                    this.cancel()
+                                    Log.e("TAG", "EmployeeScreen: getAllemployee")
                                 }
+                                isRetryButtonEnabled = !isRetryButtonEnabled
                             },
                             modifier = modifier
                                 .align(Alignment.CenterHorizontally)
@@ -203,7 +220,7 @@ fun EmployeeScreen(
                 items(itemSize) { index ->
                     val employee = employees?.get(index)
                     ShimmerListItemEmployee(
-                        isLoading = isLoading,
+                        isLoading = isLoadingListEmployee,
                         contentAfterLoading = {
                             if (employee != null) {
                                 ItemEmployee(
@@ -221,7 +238,7 @@ fun EmployeeScreen(
             }
         }
     }
-    AnimatedVisibility(visible = updateEmployeeState.isLoading) {
+    AnimatedVisibility(visible = loadingAction.value) {
         Box(modifier = modifier.fillMaxSize()) {
             CircularProgressIndicator(
                 color = MaterialTheme.colorScheme.primary,
@@ -258,12 +275,6 @@ private fun AddEmployeeSheet(
     }
     var age by remember {
         mutableStateOf("0")
-    }
-    var profileimage by remember {
-        mutableStateOf("")
-    }
-    var isDeleteLoading by remember {
-        mutableStateOf(false)
     }
 
 //    val storeBarangState = barangViewModel.storeBarangState
@@ -395,7 +406,6 @@ private fun EditEmployeeSheet(
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
 
     var id by remember {
         mutableStateOf(employeeData.id.toString())
@@ -409,17 +419,19 @@ private fun EditEmployeeSheet(
     var age by remember {
         mutableStateOf(employeeData.employee_age.toString())
     }
-    var profileimage by remember {
-        mutableStateOf(employeeData.profile_image.toString())
-    }
 
     var isUpdateButtonEnabled by remember {
         mutableStateOf(false)
     }
 
     val updateEmployeeState = employeeViewModel.updateEmployeeState.value
-    LaunchedEffect(key1 = updateEmployeeState.isLoading) {
+    val deleteEmployeeState = employeeViewModel.deleteEmployeeState.value
+    LaunchedEffect(key1 = updateEmployeeState.isLoading || deleteEmployeeState.isLoading) {
         if (updateEmployeeState.isLoading) {
+            sheetState.hide()
+            editEmployeeState.value = false
+        }
+        if (deleteEmployeeState.isLoading) {
             sheetState.hide()
             editEmployeeState.value = false
         }
@@ -437,6 +449,61 @@ private fun EditEmployeeSheet(
         salary = salary,
         age = ageInt
     )
+    var confirmDelete by remember {
+        mutableStateOf(false)
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = {
+                // Dismiss the dialog when the user clicks outside the dialog or on the back button.
+                // If you want to disable that functionality, simply leave this block empty.
+                confirmDelete = !confirmDelete
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // perform the confirm action and
+                        // close the dialog
+                        CoroutineScope(Dispatchers.IO).launch {
+                            employeeViewModel.deleteEmployee(employeeId = id)
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(2000)
+                                if (!deleteEmployeeState.isLoading) {
+                                    Toast.makeText(
+                                        context,
+                                        employeeViewModel.deleteEmployeeState.value.message,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                        confirmDelete = !confirmDelete
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.delete_employee))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        // close the dialog
+                        confirmDelete = !confirmDelete
+                    }
+                ) {
+                    Text(text = stringResource(id = R.string.cancel))
+                }
+            },
+            title = {
+                Text(text = stringResource(id = R.string.confirm_delete))
+            },
+            text = {
+                Text(text = stringResource(id = R.string.delete_employee_desc))
+            },
+            modifier = Modifier.wrapContentSize(),
+            shape = RoundedCornerShape(4.dp),
+            containerColor = MaterialTheme.colorScheme.onPrimary
+        )
+    }
 
     Column(
         modifier = modifier
@@ -633,24 +700,7 @@ private fun EditEmployeeSheet(
         }
         Button(
             onClick = {
-//                    CoroutineScope(Dispatchers.IO).launch {
-//                        barangViewModel.deleteBarang(
-//                            token = token,
-//                            id_barang = dataBarang.id.toString()
-//                        )
-//                        CoroutineScope(Dispatchers.Main).launch {
-//                            loadingState.value = deleteBarangState.value.isLoading
-//                            delay(2000)
-//                            if (!deleteBarangState.value.isLoading) {
-//                                loadingState.value = false
-//                                Toast.makeText(
-//                                    context,
-//                                    barangViewModel.deleteBarangState.value.deleteBarangData?.meta?.message.toString(),
-//                                    Toast.LENGTH_SHORT
-//                                ).show()
-//                            }
-//                        }
-//                    }
+                confirmDelete = true
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.error,
