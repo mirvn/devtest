@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">devtest</string>
+    <string name="id_label">ID:</string>
+    <string name="name_label">Name:</string>
+    <string name="salary_label">Salary:</string>
+    <string name="age_label">Age:</string>
+    <string name="rp_label">Rp.:</string>
+    <string name="rp">Rp. </string>
+    <string name="years"> Years</string>
+    <string name="years_label"> Years:</string>
+    <string name="employee_list">Employee list</string>
+    <string name="add_employee">Add Employee</string>
+    <string name="placeholder_name">Employee Name</string>
+    <string name="placeholder_salary">Employee Salary - Rp.</string>
+    <string name="employee_age">Employee Age</string>
+    <string name="search_employee">Search employee...</string>
+    <string name="detail_employee">Detail Employee</string>
+    <string name="update_employee_data">Update Employee Data</string>
+    <string name="delete_employee">Delete Employee</string>
+</resources>
