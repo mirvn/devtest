@@ -10,20 +10,24 @@ import retrofit2.http.*
 
 interface EmployeeApi {
     @GET("employees")
+    @Headers("Accept: application/json")
     suspend fun getAllEmployees(): Response<EmployeesDto>
 
     @HTTP(method = "PUT", path = "update/{employeeId}", hasBody = true)
+    @Headers("Accept: application/json")
     suspend fun updateEmployeeById(
         @Path(value = "employeeId") employeeId: String,
         @Body body: UpdateEmployee.Data
     ): Response<UpdateEmployeeDto>
 
     @HTTP(method = "DELETE", path = "delete/{employeeId}", hasBody = true)
+    @Headers("Accept: application/json")
     suspend fun deleteEmployeeById(
         @Path(value = "employeeId") employeeId: String
     ): Response<DeleteEmployeeDto>
 
     @POST("create")
+    @Headers("Accept: application/json")
     suspend fun addEmployee(
         @Body body: UpdateEmployee.Data
     ): Response<AddEmployeeDto>
