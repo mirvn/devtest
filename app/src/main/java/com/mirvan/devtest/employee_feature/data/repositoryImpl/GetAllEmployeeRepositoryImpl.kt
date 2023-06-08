@@ -38,9 +38,9 @@ class GetAllEmployeeRepositoryImpl(
                 if (contentType?.contains("application/json") == true) {
                     val errorJson = JSONObject(errorBody)
                     val errorMessage = errorJson.getString("message")
-                    emit(Resource.Error(message = errorMessage))
+                    emit(Resource.Error(message = errorMessage, data = null))
                 } else {
-                    emit(Resource.Error(message = "To many request: ${remoteLoginData.raw().code}, please try again later"))
+                    emit(Resource.Error(message = "To many request: ${remoteLoginData.raw().code}, please try again later", data = null))
                 }
             }
         } catch (e: HttpException) {
